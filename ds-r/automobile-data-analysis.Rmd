@@ -1,0 +1,163 @@
+---
+title: "Análise visual de dados automotivos"
+output: html_document
+---
+
+
+# Introdução
+
+Neste projeto, são analisados dados de ecomomia de combustível de automóveis usand a linguagem R. O fluxo de trabalho é composto pelas etapas listadas abaixo, as quais serão desenvolvidas nas seções seguintes:
+
+* Aquisição dos dados
+* Exploração e entendimento dos dados
+* Manupilação e transformação dos dados
+* Análise e modelagem
+* Comunicação dos resultatos
+
+## Pacotes R utilizados
+
+As análises deste projeto serão realizadas com uso dos seguintes pacotes R:
+
+* [`plyr`](https://www.rdocumentation.org/packages/plyr): um pacote R que permite realizar resumos estatísticos em conjuntos de dados;
+
+* [`ggplot2`](https://ggplot2.tidyverse.org/): um pacote que permite criar gráficos declarativamente, baseado na [gramática dos gráficos](https://books.google.com.br/books/about/The_Grammar_of_Graphics.html?id=_kRX4LoFfGQC&redir_esc=y);
+
+* [`reshape2`](https://www.rdocumentation.org/packages/reshape2): 
+
+```{r}
+library(plyr)
+library(ggplot2)
+library(reshape2)
+library(kableExtra)
+```
+
+## Aquisição dos dados
+
+O conjunto de dados (_dataset_) utilizado neste projeto consiste em métricas de desempenho de eficiência de combustível, medidas em **milhas por galão (MPG)** ao longo do tempo, bem como diversos atributos característicos para a maioria das marcas e modelos de automóveis disponíveis nos EUA desde 1984. 
+
+Os dados podem ser obtidos no seguinte sítio eletrônico http://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip e as informações acerca das variáveis do _dataset_ podem ser encontradas neste endereço: http://www.fueleconomy.gov/feg/ws/index.shtml#vehicle.
+
+### Importação do conjunto de dados
+
+```{r}
+vehicles <- read.csv(unz("data/vehicles.csv.zip", "vehicles.csv"), stringsAsFactor = F) #nolint
+```
+
+Visualização dos primeiros registros do _dataset_:
+```{r}
+head(vehicles)
+```
+
+## Exploração e entendimento dos dados
+
+Nesta seção, exploramos a aparência geral dos dados por meio de alguns comandos R básicos.
+
+Iniciamos com a contagem do número de observações (linhas) presentes nos dados com uso da função `nrow` e contagem da quantidade de variáveis por meio da função `ncol`. Nesse sentido, o _dataset_ contém `r nrow(vehicles)` observações registradas e um total de `r ncol(vehicles)` variáveis.
+
+A seguir, são listadas os nomes de cada uma das variáveis (colunas):
+
+```{r}
+names(vehicles)
+```
+
+A maioria das variáveis possui um nome (em inglês) descritivo de seu conteúdo. Para mais detalhes do significado de cada campo, pode-se consultar o endereço eletrônico: http://www.fueleconomy.gov/feg/ws/index.shtml#vehicle.
+
+
+```{r}
+nyears <- length(unique(vehicles[, "year"]))
+first_year <- min(vehicles[, "year"])
+last_year <- max(vehicles[, "year"])
+```
+
+Os dados referem-se a um período de `r nyears` anos, iniciando em `r first_year` e terminando no ano de `r last_year`.
+
+Quanto ao tipo de combustível utilizado nos automóveis, observamos os seguintes quantitativos:
+
+```{r}
+x <- data.frame(table(vehicles$fuelType1))
+names(x) <- c("fuelType1", "qtd")
+
+x %>%
+    kbl() #%>%
+    #kable_paper(bootstrap_options = "striped", full_width = F)
+```
+
+A próxima análise refere-se aos tipos de transmissões (`trany`) usadas nso automóveis. Mas antes disso, faremos o tratamento dos dados faltantes, que serão substituídos por `NA`.
+
+```{r}
+vehicles$trany[vehicles$trany == ""] <- NA
+```
+
+Em seguida, utilizamos a função `substr` para extrair os quatro primeiros caracteres da coluna `trany` a fim de determinar se o automóvel é de tipo automático (`Auto`) ou manual (`Manual`):
+
+```{r}
+vehicles$trany2 <- ifelse(substr(vehicles$trany, 1, 4) == "Auto", "Auto", "Manual") # nolint
+vehicles$trany2 <- as.factor(vehicles$trany2)
+```
+
+Finalmente, as quantidade de veículos por tipo de transmissão é mostrada na tabela seguinte:
+
+```{r}
+x <- data.frame(table(vehicles$trany2))
+names(x) <- c("tranyType", "qtd")
+
+kbl(x) #%>%
+    #kable_paper(bootstrap_options = "striped", full_width = F)
+```
+
+Percebe-se que a quantidade de veículos com transmissão de tipo automática e quase o dobro da quantidade de automóveis de tipo manual.
+
+## Análise da eficiência de combustível ao longo do tempo
+
+Iniciamos esta análise verificando a tendência geral de como a eficiência de combustível muda no decorrer dos anos. Para tanto, dividimos o _dataframe_ `vehicles` em grupos por ano, aplicamos a função média a variáveis específicas e combinamos os resultados em um novo _dataframe_:
+
+```{r}
+mpg_by_yr <- ddply(vehicles, ~year, summarise,
+    avgMPG = mean(comb08),
+    avgHghy = mean(highway08),
+    avgCity = mean(city08)
+)
+```
+
+```{r}
+head(mpg_by_yr)
+```
+
+Visualização gráfica do resultado acima:
+```{r}
+mpg_by_yr %>%
+    ggplot(aes(year, avgMPG)) +
+        geom_point() +
+        geom_smooth() +
+        ylab("MPG Médio") +
+        xlab("Ano") +
+        ggtitle("Eficiência ao longo do tempo - Todos os carros")
+```
+
+O gráfico acima mostra que a partir de meados dos anos 2000, houve um grande aumento na eficiência de combustível dos veículos no mercado o que pode se dever ao tipo de combustível utilizado nos últimos anos.
+
+```{r}
+gas_cars <- subset(vehicles, fuelType1 %in% c("Regular Gasoline", "Premium Gasoline", "Midgrade Gsoline") & fuelType2 == "" & atvType != "Hybrid") # nolint
+
+mpg_by_yr_gas <- ddply(gas_cars, ~year, summarise, avgMPG = mean(comb08))
+
+mpg_by_yr_gas %>%
+    ggplot(aes(year, avgMPG)) +
+        geom_point() +
+        geom_smooth() +
+        xlab("Ano") +
+        ylab("MPG Médio") +
+        ggtitle("Eficiência ao longo do tempo - Carros a gasolina")
+```
+
+Outra possibilidade para explicar o aumento da eficiência dos carros nos últimos anos está relacionada ao tamanho dos motores dos carros modernos. Assim, cabe perquntar: "Menos carros com motores grandes foram feitos recentemente?"
+
+```{r}
+gas_cars$displ <- as.numeric(gas_cars$displ)
+
+ggplot(gas_cars, aes(displ, comb08)) +
+    geom_point() +
+    geom_smooth() +
+    xlab("Cilindrada do motor em litros") +
+    ylab("MPG")
+```
