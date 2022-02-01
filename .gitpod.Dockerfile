@@ -5,7 +5,7 @@ RUN apt-get update
 
 # Install python packages
 RUN python -m pip install --upgrade pip
-COPY requirements.txt requirements.txt
+COPY requirements.txt ./
 RUN pip3 install -r requirements.txt
 
 # Install R
