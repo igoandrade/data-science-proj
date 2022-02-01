@@ -3,7 +3,7 @@ FROM gitpod/workspace-full:latest
 USER root
 RUN apt-get update
 
-# Install python environment
+# Install python packages
 RUN python -m pip install --upgrade pip
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
@@ -34,5 +34,3 @@ RUN Rscript -e "install.packages('scales')"
 RUN Rscript -e "install.packages('timetk')"
 RUN Rscript -e "install.packages('tibbletime')"
 RUN Rscript -e "install.packages('PerformanceAnalytics')"
-RUN Rscript -e "install.packages('IRkernel')"
-RUN Rscript -e "IRkernel::installspec()"
