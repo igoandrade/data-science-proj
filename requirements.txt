@@ -11,5 +11,3 @@ scikit-learn
 graphviz
 ipykernel
 jupyterlab
-radian
-rpy2
