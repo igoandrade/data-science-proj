@@ -13,3 +13,6 @@ ipykernel
 jupyterlab
 SQLAlchemy
 openpyxl
+pygooglenews
+nltk 
+textblob
