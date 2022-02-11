@@ -16,3 +16,5 @@ openpyxl
 pygooglenews
 nltk 
 textblob
+vaderSentiment
+radian
